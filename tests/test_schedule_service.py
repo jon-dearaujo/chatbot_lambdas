@@ -9,7 +9,9 @@ class TestScheduleService(unittest.TestCase):
             'currentIntent': {
                 'name': 'ScheduleService',
                 'slots': {
-                    'serviceNumber': None
+                    'serviceSelection': None,
+                    'serviceDate': None,
+                    'serviceTime': None
                 }
             },
             'bot': {
@@ -31,12 +33,12 @@ class TestScheduleService(unittest.TestCase):
 
 
     def test_response_must_include_slots_and_slot_to_elicit_if_service_number_not_provided_yet(self):
-        self.event['currentIntent']['slots']['serviceNumber'] = None
+        self.event['currentIntent']['slots']['serviceSelection'] = None
         result = schedule_service.lambda_handler(self.event, self.context)
         dialogAction = result['dialogAction']
 
-        self.assertEqual('serviceNumber', dialogAction['slotToElicit'])
-        self.assertTrue('serviceNumber' in dialogAction['slots'])
+        self.assertEqual('serviceSelection', dialogAction['slotToElicit'])
+        self.assertTrue('serviceSelection' in dialogAction['slots'])
 
 
     def test_handler_must_only_handle_ScheduleService_intent(self):
@@ -45,13 +47,13 @@ class TestScheduleService(unittest.TestCase):
             schedule_service.lambda_handler(self.event, self.context)
 
         self.assertEqual(
-            'Intent with name AnotherIntent not supported',
+            'Intent with name AnotherIntent not supported.',
             str(capturedError.exception)
         )
 
 
     def test_handler_must_ask_again_if_provided_option__for_serviceNumber_is_invalid(self):
-        self.event['currentIntent']['slots'] = {'serviceNumber': 'whateverinvalidvalue'}
+        self.event['currentIntent']['slots']['serviceSelection'] = 'whateverinvalidvalue'
         result = schedule_service.lambda_handler(self.event, self.context)
         dialogAction = result['dialogAction']
 
@@ -59,7 +61,7 @@ class TestScheduleService(unittest.TestCase):
         self.assertTrue('PlainText' in dialogAction['message']['contentType'])
 
         self.assertTrue(
-            'Não consegui identificar a opção selecionada. Por gentileza, tente novamente'
+            'Não consegui identificar o serviço desejado. Por gentileza, tente novamente.'
                 in dialogAction['message']['content'],
             'Validation message not present'
         )

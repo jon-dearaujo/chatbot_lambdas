@@ -1,48 +1,14 @@
-services = [
-    'Radiografias Intra-Bucais.',
-    'Radiografias Extra-Bucais.',
-    'Tomografia Computadorizada de Feixe Cônico.',
-    'Documentação Ortodôntica Digital.',
-    'Documentação Padrão Dolphin 2D / 3D.'
-]
-
-
-def buildServicesListMessage():
-    baseMessage = """
-Este são os serviços disponíveis para agendamento.
-Digite 'Opção' seguido pela letra da opção. Exemplo: 'Opção 1'
-    """
-    return baseMessage.join(["""
-        {} - {}
-    """.format(index + 1, service) for index, service in enumerate(services)])
-
-
-def _validateServiceNumber(serviceSlot):
-    pass
-
+from schedule_service.service_scheduler import ServiceScheduler
+from schedule_service.lex_response_builder import LexResponseBuilder
 
 def lambda_handler(event, context):
+    current_intent = event['currentIntent']
+    if not current_intent['name'] == 'ScheduleService':
+        raise Exception(f"Intent with name {current_intent['name']} not supported.")
 
-    currentIntent = event['currentIntent']
-    inputSlots = currentIntent['slots']
-
-    if not currentIntent['name'] == 'ScheduleService':
-        raise Exception('Intent with name {} not supported'.format(currentIntent['name']))
-
-    if inputSlots['serviceNumber']:
-        _validateServiceNumber(inputSlots['serviceNumber'])
-
-    return {
-        'dialogAction': {
-            'intentName': 'ScheduleService',
-            'type': 'ElicitSlot',
-            'message': {
-                'contentType': 'PlainText',
-                'content': buildServicesListMessage()
-            },
-            'slotToElicit': 'serviceNumber',
-            'slots': {
-                'serviceNumber': None
-            }
-        }
-    }
+    return ServiceScheduler(
+        current_intent['slots']['serviceSelection'],
+        current_intent['slots']['serviceDate'],
+        current_intent['slots']['serviceTime'],
+        LexResponseBuilder()
+    ).next_step()

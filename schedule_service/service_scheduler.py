@@ -1,24 +1,30 @@
+import logging
+
+LOGGER = logging.getLogger()
+LOGGER.setLevel(logging.DEBUG)
+
 class ServiceScheduler:
 
-    def __init__(self, service_selection, service_date, service_time, response_builder):
+    def __init__(self, service_selection, service_date, service_time, confirmation_status, response_builder):
         self.__action_name = 'ScheduleService'
         self.service_selection = service_selection
         self.service_date = service_date
         self.service_time = service_time
+        self.__confirmation_status = confirmation_status
         self.__response_builder = response_builder
 
         # If we want to use dynamic service list, we can put it in the session attributes
         # of the event and load it here
         self.services = [
-            'Radiografias Intra-Bucais.',
-            'Radiografias Extra-Bucais.',
-            'Tomografia Computadorizada de Feixe Cônico.',
-            'Documentação Ortodôntica Digital.',
-            'Documentação Padrão Dolphin 2D / 3D.'
+            'Radiografias Intra-Bucais',
+            'Radiografias Extra-Bucais',
+            'Tomografia Computadorizada de Feixe Cônico',
+            'Documentação Ortodôntica Digital',
+            'Documentação Padrão Dolphin 2D / 3D'
         ]
 
         # TEMPORARY MOCKS. We might load the dates and times from gcalendar once the service is selected
-        # and store it into the session attributes of the event
+        # and store them into the session attributes of the event so that we can load between chat requests
         # self.available_dates = json.parse(event['sessionAttributes'])
         self.available_dates = [
             '10/09/2020',
@@ -79,6 +85,19 @@ class ServiceScheduler:
                 self.__build_times_message()
             )
 
+        if not self.__confirmation_status:
+            return self.__response_builder.confirm_inputs(
+                self.__action_name,
+                self.__fields_to_object(),
+                self.__build_confirmation_message())
+        elif self.__confirmation_status == 'Confirmed':
+            #Schedule service on gcalendar
+            is_success = True
+            return self.__response_builder.notify_completion(is_success, 'Agendamento realizado com sucesso, você receberá um lembrete no dia anterior. Tenha um bom dia')
+        elif self.__confirmation_status == 'Denied':
+            is_success = False
+            return self.__response_builder.notify_completion(is_success, 'Agendamento não realizado. Para interagir novamente, basta enviar uma nova mensagem e reiniciaremos o processo.')
+
     def __load_service_dates(self):
         pass
 
@@ -96,7 +115,7 @@ class ServiceScheduler:
         if self.service_selection and not self.__service_selection_is_valid():
             return self.__build_validation_result(
                 False,
-                'ServiceSelection',
+                'serviceSelection',
                 self.__build_services_message('Não consegui identificar o serviço desejado. Por gentileza, tente novamente.'))
 
         # REQUIRES THE AVAILABLE DATES TO BE ALREADY REQUESTED FROM G CALENDAR
@@ -105,21 +124,23 @@ class ServiceScheduler:
         if self.service_date and self.available_dates and not self.__service_date_is_valid():
             return self.__build_validation_result(
                 False,
-                'ServiceDate',
+                'serviceDate',
                 self.__build_dates_message('Não consegui identificar a data desejada. Por gentileza, tente novamente.')
             )
 
         if self.service_time and self.available_times and not self.__service_time_is_valid():
             return self.__build_validation_result(
                 False,
-                'ServiceDate',
+                'serviceTime',
                 self.__build_times_message('Não consegui identificar o horário desejado. Por gentileza, tente novamente.')
             )
         return self.__build_validation_result(True, None, None)
 
 
     def __build_validation_result(self, is_valid, invalid_field_name, message):
-        return {'is_valid': is_valid, 'invalid_field': invalid_field_name, 'message': message}
+        result = {'is_valid': is_valid, 'invalid_field': invalid_field_name, 'message': message}
+        LOGGER.debug(f'Invalid input={result}')
+        return result
 
     def __service_time_is_valid(self):
         return self.__option_index_is_valid_and_within_range(self.service_time, len(self.available_times))
@@ -131,38 +152,45 @@ class ServiceScheduler:
         return self.__option_index_is_valid_and_within_range(self.service_selection, len(self.services))
 
     def __option_index_is_valid_and_within_range(self, option_text, list_size):
-        if not len(option_text.split()) == 2:
+        if not option_text.isnumeric():
             return False
-        index = int(option_text.split()[1])
-        return index and (index > 0 and index <= list_size)
+
+        index = int(option_text)
+        return index and index > 0 and index <= list_size
 
     def __build_times_message(self, text_to_append_before=''):
         return f"""
 {text_to_append_before}
-Estas são os horários disponíveis para {self.services[self.service_selection - 1]} no dia {self.available_dates[self.service_date]}.
-Digite 'Opção' seguido pela número da opção. Exemplo: 'Opção 1'.
+Estas são os horários disponíveis para {self.services[int(self.service_selection) - 1]} no dia {self.available_dates[int(self.service_date) - 1]}.
+Digite o número da opção desejada.
 
-        """.join([f"""
-        {index + 1} - {time}
-        """ for index, time in enumerate(self.available_times)])
+{str().join([f'''{index + 1} - {time}
+''' for index, time in enumerate(self.available_times)])}
+        """
 
     def __build_dates_message(self, text_to_append_before=''):
         return f"""
 {text_to_append_before}
-Estas são as datas disponíveis para {self.services[self.service_selection - 1]}.
-Digite 'Opção' seguido pela número da opção. Exemplo: 'Opção 1'.
+Estas são as datas disponíveis para {self.services[int(self.service_selection) - 1]}.
+Digite o número da opção desejada.
 
-        """.join([f"""
-        {index + 1} - {date}
-        """ for index, date in enumerate(self.available_dates)])
+{str().join([f'''{index + 1} - {date}
+''' for index, date in enumerate(self.available_dates)])}
+        """
 
 
     def __build_services_message(self, text_to_append_before=''):
         return f"""
 {text_to_append_before}
 Este são os serviços disponíveis para agendamento.
-Digite 'Opção' seguido pelo número da opção. Exemplo: 'Opção 1'.
+Digite o número da opção desejada.
 
-        """ + str().join([f"""
-        {index + 1} - {service}
-        """ for index, service in enumerate(self.services)])
+{str().join([f'''{index + 1} - {service}
+''' for index, service in enumerate(self.services)])}
+        """
+
+    def __build_confirmation_message(self):
+        return f'''
+Você confirma o agendamento de {self.services[int(self.service_selection) - 1]} no dia {self.available_dates[int(self.service_date) - 1]}
+ às {self.available_times[int(self.service_time) - 1]}?
+        '''

@@ -3,7 +3,6 @@ from schedule_service import schedule_service
 
 class TestScheduleService(unittest.TestCase):
     def setUp(self):
-        self.context = {}
         self.event = {
             'invocationSource': 'DialogCodeHook',
             'currentIntent': {
@@ -12,7 +11,8 @@ class TestScheduleService(unittest.TestCase):
                     'serviceSelection': None,
                     'serviceDate': None,
                     'serviceTime': None
-                }
+                },
+                'confirmationStatus': None
             },
             'bot': {
                 'name': 'BioFaceAppointment'
@@ -21,7 +21,7 @@ class TestScheduleService(unittest.TestCase):
         }
 
     def test_response_must_ask_list_services_and_ask_for_user_selection(self):
-        result = schedule_service.lambda_handler(self.event, self.context)
+        result = schedule_service.dispatch(self.event)
         dialogAction = result['dialogAction']
         dialogActionMessage = dialogAction['message']
 
@@ -34,7 +34,7 @@ class TestScheduleService(unittest.TestCase):
 
     def test_response_must_include_slots_and_slot_to_elicit_if_service_number_not_provided_yet(self):
         self.event['currentIntent']['slots']['serviceSelection'] = None
-        result = schedule_service.lambda_handler(self.event, self.context)
+        result = schedule_service.dispatch(self.event)
         dialogAction = result['dialogAction']
 
         self.assertEqual('serviceSelection', dialogAction['slotToElicit'])
@@ -44,7 +44,7 @@ class TestScheduleService(unittest.TestCase):
     def test_handler_must_only_handle_ScheduleService_intent(self):
         self.event['currentIntent']['name'] = 'AnotherIntent'
         with self.assertRaises(Exception) as capturedError:
-            schedule_service.lambda_handler(self.event, self.context)
+            schedule_service.dispatch(self.event)
 
         self.assertEqual(
             'Intent with name AnotherIntent not supported.',
@@ -54,7 +54,8 @@ class TestScheduleService(unittest.TestCase):
 
     def test_handler_must_ask_again_if_provided_option__for_serviceNumber_is_invalid(self):
         self.event['currentIntent']['slots']['serviceSelection'] = 'whateverinvalidvalue'
-        result = schedule_service.lambda_handler(self.event, self.context)
+        result = schedule_service.dispatch(self.event)
+
         dialogAction = result['dialogAction']
 
         self.assertEqual('ElicitSlot', dialogAction['type'])
@@ -71,11 +72,11 @@ class TestScheduleService(unittest.TestCase):
 
     def _assert_available_services(self, messageText):
         services =[
-            'Radiografias Intra-Bucais.',
-            'Radiografias Extra-Bucais.',
-            'Tomografia Computadorizada de Feixe Cônico.',
-            'Documentação Ortodôntica Digital.',
-            'Documentação Padrão Dolphin 2D / 3D.'
+            'Radiografias Intra-Bucais',
+            'Radiografias Extra-Bucais',
+            'Tomografia Computadorizada de Feixe Cônico',
+            'Documentação Ortodôntica Digital',
+            'Documentação Padrão Dolphin 2D / 3D'
         ]
         for service in services:
             self.assertTrue(service in messageText, '{} not found'.format(service))

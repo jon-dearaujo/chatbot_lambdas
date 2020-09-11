@@ -1,11 +1,3 @@
-import json
-import time
-import os
-import logging
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-
 '''
 Fixed messages;
 '''
@@ -45,15 +37,3 @@ def dispatch(event):
     return elicitIntent(
         event['sessionAttributes'] if event['sessionAttributes'] is not None else {},
     )
-
-
-def lambda_handler(event, context):
-    """
-    Route the incoming request based on intent.
-    The JSON body of the request is provided in the event slot.
-    """
-    os.environ['TZ'] = 'America/Sao_Paulo'
-    time.tzset()
-    logger.debug('event.bot.name={}'.format(event['bot']['name']))
-
-    return dispatch(event)

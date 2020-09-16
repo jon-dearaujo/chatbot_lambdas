@@ -1,6 +1,4 @@
-'''
-Fixed messages;
-'''
+'List the actions available in the Chatbot, like "schedule appointment" or "cancel appointment".'
 def buildResponseMessage():
     return '''
 Olá, sou o Assistente Virtual da BioFace.

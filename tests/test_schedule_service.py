@@ -20,6 +20,7 @@ class TestScheduleService(unittest.TestCase):
             'sessionAttributes': None
         }
 
+
     def test_response_must_ask_list_services_and_ask_for_user_selection(self):
         result = schedule_service.dispatch(self.event)
         dialogAction = result['dialogAction']
@@ -29,7 +30,7 @@ class TestScheduleService(unittest.TestCase):
         self.assertEqual('ElicitSlot', dialogAction['type'])
         self.assertTrue('PlainText' in dialogActionMessage['contentType'])
 
-        self._assert_available_services(dialogActionMessage['content'])
+        self.__assert_available_services(dialogActionMessage['content'])
 
 
     def test_response_must_include_slots_and_slot_to_elicit_if_service_number_not_provided_yet(self):
@@ -59,6 +60,7 @@ class TestScheduleService(unittest.TestCase):
         dialogAction = result['dialogAction']
 
         self.assertEqual('ElicitSlot', dialogAction['type'])
+        self.assertTrue('serviceNumber', dialogAction['slotToElicit'])
         self.assertTrue('PlainText' in dialogAction['message']['contentType'])
 
         self.assertTrue(
@@ -66,11 +68,124 @@ class TestScheduleService(unittest.TestCase):
                 in dialogAction['message']['content'],
             'Validation message not present'
         )
-        self._assert_available_services(dialogAction['message']['content'])
+        self.__assert_available_services(dialogAction['message']['content'])
+
+
+    def test_handler_must_ask_for_service_date_given_that_serviceNumber_is_already_provided(self):
+        self.event['currentIntent']['slots']['serviceSelection'] = '1'
+        result = schedule_service.dispatch(self.event)
+
+        dialog_action = result['dialogAction']
+
+        self.assertEqual('ElicitSlot', dialog_action['type'])
+        self.assertTrue('serviceData', dialog_action['slotToElicit'])
+
+        self.assertTrue(
+            'Estas são as datas disponíveis' in dialog_action['message']['content']
+        )
+
+
+    def test_handler_must_ask__again_for_service_date_if_it_has_invalid_value(self):
+        self.event['currentIntent']['slots']['serviceSelection'] = '1'
+        self.event['currentIntent']['slots']['serviceDate'] = '10'
+
+        result = schedule_service.dispatch(self.event)
+
+        dialog_action = result['dialogAction']
+
+        self.assertEqual('ElicitSlot', dialog_action['type'])
+        self.assertTrue('serviceData', dialog_action['slotToElicit'])
+
+        self.assertTrue(
+            'Não consegui identificar a data desejada. Por gentileza, tente novamente.'
+                in dialog_action['message']['content']
+        )
+        self.assertTrue(
+            'Estas são as datas disponíveis' in dialog_action['message']['content']
+        )
+
+
+    def test_handler_must_ask_for_service_time_given_that_serviceNumber_and_serviceDate_are_already_provided(self):
+        self.event['currentIntent']['slots']['serviceSelection'] = '1'
+        self.event['currentIntent']['slots']['serviceDate'] = '1'
+        result = schedule_service.dispatch(self.event)
+
+        dialog_action = result['dialogAction']
+
+        self.assertEqual('ElicitSlot', dialog_action['type'])
+        self.assertTrue('serviceTime', dialog_action['slotToElicit'])
+
+        self.assertTrue(
+            'Estas são os horários disponíveis' in dialog_action['message']['content']
+        )
+
+
+    def test_handler_must_ask__again_for_service_time_if_it_has_invalid_value(self):
+        self.event['currentIntent']['slots']['serviceSelection'] = '1'
+        self.event['currentIntent']['slots']['serviceDate'] = '1'
+        self.event['currentIntent']['slots']['serviceTime'] = '10'
+
+        result = schedule_service.dispatch(self.event)
+
+        dialog_action = result['dialogAction']
+
+        self.assertEqual('ElicitSlot', dialog_action['type'])
+        self.assertTrue('serviceTime', dialog_action['slotToElicit'])
+
+        self.assertTrue(
+            'Não consegui identificar o horário desejado. Por gentileza, tente novamente.'
+                in dialog_action['message']['content']
+        )
+        self.assertTrue(
+            'Estas são os horários disponíveis' in dialog_action['message']['content']
+        )
+
+
+    def test_handler_must_confirm_values_after_all_inputs_are_provided(self):
+        self.event['currentIntent']['slots']['serviceSelection'] = '1'
+        self.event['currentIntent']['slots']['serviceDate'] = '1'
+        self.event['currentIntent']['slots']['serviceTime'] = '1'
+
+        result = schedule_service.dispatch(self.event)
+        dialog_action = result['dialogAction']
+
+        self.assertEqual('ConfirmIntent', dialog_action['type'])
+        self.assertEqual('PlainText', dialog_action['message']['contentType'])
+        self.assertTrue('Você confirma o agendamento de' in dialog_action['message']['content'])
+
+
+    def test_handler_must_close_interaction_once_all_inputs_are_fulfilled_and_user_has_confirmed(self):
+        self.event['currentIntent']['slots']['serviceSelection'] = '1'
+        self.event['currentIntent']['slots']['serviceDate'] = '1'
+        self.event['currentIntent']['slots']['serviceTime'] = '1'
+        self.event['currentIntent']['confirmationStatus'] = 'Confirmed'
+
+        result = schedule_service.dispatch(self.event)
+        dialog_action = result['dialogAction']
+
+        self.assertEqual('Close', dialog_action['type'])
+        self.assertEqual('Fulfilled', dialog_action['fulfillmentState'])
+        self.assertTrue('Agendamento realizado com sucesso, você receberá um lembrete no dia anterior. Tenha um bom dia'
+                in dialog_action['message']['content'])
+
+
+    def test_handler_must_close_interaction_without_schedulling_once_all_inputs_are_fulfilled_and_user_has_denied_confirmation(self):
+        self.event['currentIntent']['slots']['serviceSelection'] = '1'
+        self.event['currentIntent']['slots']['serviceDate'] = '1'
+        self.event['currentIntent']['slots']['serviceTime'] = '1'
+        self.event['currentIntent']['confirmationStatus'] = 'Denied'
+
+        result = schedule_service.dispatch(self.event)
+        dialog_action = result['dialogAction']
+
+        self.assertEqual('Close', dialog_action['type'])
+        self.assertEqual('Failed', dialog_action['fulfillmentState'])
+        self.assertTrue('Agendamento não realizado. Para interagir novamente, basta enviar uma nova mensagem e reiniciaremos o processo.'
+                in dialog_action['message']['content'])
 
 
 
-    def _assert_available_services(self, messageText):
+    def __assert_available_services(self, messageText):
         services =[
             'Radiografias Intra-Bucais',
             'Radiografias Extra-Bucais',

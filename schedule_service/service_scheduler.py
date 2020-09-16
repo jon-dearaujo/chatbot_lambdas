@@ -4,7 +4,7 @@ LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.DEBUG)
 
 class ServiceScheduler:
-
+    'Class responsible for controlling the appointment flow based on user provided inputs'
     def __init__(self, service_selection, service_date, service_time, confirmation_status, response_builder):
         self.__action_name = 'ScheduleService'
         self.service_selection = service_selection
@@ -45,6 +45,7 @@ class ServiceScheduler:
             '02:00 PM',
             '03:00 PM',
         ]
+
 
     def next_step(self):
         validation_result = self.__validate()
@@ -98,10 +99,13 @@ class ServiceScheduler:
             is_success = False
             return self.__response_builder.notify_completion(is_success, 'Agendamento não realizado. Para interagir novamente, basta enviar uma nova mensagem e reiniciaremos o processo.')
 
+
     def __load_service_dates(self):
         pass
 
+
     def __load_service_times(self):
+
         pass
 
     def __fields_to_object(self):
@@ -110,6 +114,7 @@ class ServiceScheduler:
             'serviceDate': self.service_date,
             'serviceTime': self.service_time
         }
+
 
     def __validate(self):
         if self.service_selection and not self.__service_selection_is_valid():
@@ -142,14 +147,18 @@ class ServiceScheduler:
         LOGGER.debug(f'Invalid input={result}')
         return result
 
+
     def __service_time_is_valid(self):
         return self.__option_index_is_valid_and_within_range(self.service_time, len(self.available_times))
+
 
     def __service_date_is_valid(self):
         return self.__option_index_is_valid_and_within_range(self.service_date, len(self.available_dates))
 
+
     def __service_selection_is_valid(self):
         return self.__option_index_is_valid_and_within_range(self.service_selection, len(self.services))
+
 
     def __option_index_is_valid_and_within_range(self, option_text, list_size):
         if not option_text.isnumeric():
@@ -157,6 +166,7 @@ class ServiceScheduler:
 
         index = int(option_text)
         return index and index > 0 and index <= list_size
+
 
     def __build_times_message(self, text_to_append_before=''):
         return f"""
@@ -167,6 +177,7 @@ Digite o número da opção desejada.
 {str().join([f'''{index + 1} - {time}
 ''' for index, time in enumerate(self.available_times)])}
         """
+
 
     def __build_dates_message(self, text_to_append_before=''):
         return f"""
@@ -188,6 +199,7 @@ Digite o número da opção desejada.
 {str().join([f'''{index + 1} - {service}
 ''' for index, service in enumerate(self.services)])}
         """
+
 
     def __build_confirmation_message(self):
         return f'''

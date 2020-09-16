@@ -4,6 +4,7 @@ LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.DEBUG)
 
 class LexResponseBuilder:
+    'Class responsible for building responses in the format accepted by AWS Lex.'
     def ask_for_input(self, intent_name, slots, slot_to_elicit, message, session_attributes=None):
         elicit = {
             'sessionAttributes': session_attributes,

@@ -1,6 +1,7 @@
 import unittest
 import json
-from list_actions import list_actions
+from src.list_actions import list_actions
+
 
 class TestListActions(unittest.TestCase):
 
@@ -25,7 +26,6 @@ class TestListActions(unittest.TestCase):
             'Intent with name anotherIntent not supported',
             str(capturedError.exception)
         )
-
 
     def test_throws_error_when_not_fulfillment_invocation_source(self):
         self.event['invocationSource'] = 'DialogCodeHook'

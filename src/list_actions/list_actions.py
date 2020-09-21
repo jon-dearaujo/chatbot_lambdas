@@ -1,5 +1,7 @@
 'List the actions available in the Chatbot, like "schedule appointment" or "cancel appointment".'
-def buildResponseMessage():
+
+
+def __buildResponseMessage():
     return '''
 Olá, sou o Assistente Virtual da BioFace.
 
@@ -9,17 +11,19 @@ Abaixo estão as ações disponíveis neste canal. Digite a opção que correspo
 - Cancelar um serviço.
     '''
 
-def elicitIntent(sessionAttributes):
+
+def __elicitIntent(sessionAttributes):
     return {
         'sessionAttributes': sessionAttributes,
         'dialogAction': {
             'type': 'ElicitIntent',
             'message': {
                 'contentType': 'PlainText',
-                'content': buildResponseMessage()
+                'content': __buildResponseMessage()
             }
         }
     }
+
 
 def dispatch(event):
 
@@ -30,8 +34,9 @@ def dispatch(event):
         raise Exception('Intent with name ' + intentName + ' not supported')
 
     if not invocationSource == 'FulfillmentCodeHook':
-        raise Exception('ListAvailableActions needs only a fulfillment handler')
+        raise Exception(
+            'ListAvailableActions needs only a fulfillment handler')
 
-    return elicitIntent(
+    return __elicitIntent(
         event['sessionAttributes'] if event['sessionAttributes'] is not None else {},
     )
